@@ -4,12 +4,15 @@ import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Calendar, MapPin, UserPlus, X } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import PhotoUploader from "../components/PhotoUploader";
+import PhotoGrid from "../components/PhotoGrid";
 
 export default function EventDetails() {
   const { id } = useParams();
   const { user } = useAuth();
 
   const [event, setEvent] = useState(null);
+  const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -26,8 +29,16 @@ export default function EventDetails() {
       .finally(() => setLoading(false));
   };
 
+  const fetchPhotos = () => {
+    api
+      .get(`/events/${id}/photos`)
+      .then((res) => setPhotos(res.data.photos))
+      .catch(() => {});
+  };
+
   useEffect(() => {
     fetchEvent();
+    fetchPhotos();
   }, [id]);
 
   const isOwner = event && user && event.createdBy._id === user.id;
@@ -54,6 +65,16 @@ export default function EventDetails() {
     } catch (err) {
       setMemberError(err.response?.data?.message || "Could not remove team member");
     }
+  };
+
+  const handlePhotosUploaded = (newPhotos) => {
+    setPhotos((prev) => [...newPhotos, ...prev]);
+    fetchEvent();
+  };
+
+  const handlePhotoDeleted = (photoId) => {
+    setPhotos((prev) => prev.filter((p) => p._id !== photoId));
+    fetchEvent();
   };
 
   if (loading) return <p className="text-gray-400 text-sm">Loading event...</p>;
@@ -127,7 +148,7 @@ export default function EventDetails() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 p-6">
+      <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
         <h2 className="font-semibold text-ink mb-4">Team Members</h2>
 
         {memberError && (
@@ -181,6 +202,16 @@ export default function EventDetails() {
             </button>
           </form>
         )}
+      </div>
+
+      <div className="space-y-4">
+        <PhotoUploader eventId={id} onUploaded={handlePhotosUploaded} />
+        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+          <h2 className="font-semibold text-ink mb-4">
+            Photos <span className="text-gray-400 font-normal">({photos.length})</span>
+          </h2>
+          <PhotoGrid photos={photos} isEventOwner={isOwner} onDeleted={handlePhotoDeleted} />
+        </div>
       </div>
     </div>
   );
