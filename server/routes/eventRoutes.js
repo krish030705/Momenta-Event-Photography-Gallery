@@ -9,7 +9,7 @@ import {
   addTeamMember,
   removeTeamMember,
 } from "../controllers/eventController.js";
-import { uploadPhotos, getPhotos } from "../controllers/photoController.js";
+import { uploadPhotos, getPhotos, bulkSelectPhotos } from "../controllers/photoController.js";
 import { protect, authorize } from "../middleware/authMiddleware.js";
 import upload from "../middleware/uploadMiddleware.js";
 
@@ -29,5 +29,6 @@ router.delete("/:id/members/:userId", authorize("admin"), removeTeamMember);
 
 router.post("/:id/photos", upload.array("photos", 20), uploadPhotos);
 router.get("/:id/photos", getPhotos);
+router.patch("/:id/photos/bulk-select", authorize("admin"), bulkSelectPhotos);
 
 export default router;

@@ -6,6 +6,7 @@ import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import PhotoUploader from "../components/PhotoUploader";
 import PhotoGrid from "../components/PhotoGrid";
+import CurationWorkspace from "../components/CurationWorkspace";
 
 export default function EventDetails() {
   const { id } = useParams();
@@ -203,14 +204,39 @@ export default function EventDetails() {
           </form>
         )}
       </div>
-
+      {/* Photo upload -- both roles can upload */}
       <div className="space-y-4">
         <PhotoUploader eventId={id} onUploaded={handlePhotosUploaded} />
+
         <div className="bg-white rounded-2xl border border-gray-200 p-6">
-          <h2 className="font-semibold text-ink mb-4">
-            Photos <span className="text-gray-400 font-normal">({photos.length})</span>
-          </h2>
-          <PhotoGrid photos={photos} isEventOwner={isOwner} onDeleted={handlePhotoDeleted} />
+          {isOwner ? (
+            <>
+              <h2 className="font-semibold text-ink mb-4">
+                Curation Workspace{" "}
+                <span className="text-gray-400 font-normal">({photos.length} photos)</span>
+              </h2>
+              <CurationWorkspace
+                eventId={id}
+                photos={photos}
+                teamMembers={event.teamMembers}
+                onPhotosUpdated={setPhotos}
+              />
+            </>
+          ) : (
+            <>
+              <h2 className="font-semibold text-ink mb-4">
+                Your Uploads{" "}
+                <span className="text-gray-400 font-normal">
+                  ({photos.filter((p) => p.uploadedBy?._id === user.id).length})
+                </span>
+              </h2>
+              <PhotoGrid
+                photos={photos.filter((p) => p.uploadedBy?._id === user.id)}
+                isEventOwner={false}
+                onDeleted={handlePhotoDeleted}
+              />
+            </>
+          )}
         </div>
       </div>
     </div>
