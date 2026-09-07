@@ -1,4 +1,4 @@
-# Vistara — Intelligent Event Photography & Gallery Platform
+# Momenta — Intelligent Event Photography & Gallery Platform
 
 A collaborative photography workflow platform built with the MERN stack.
 Admins create events, team members upload photos, admins curate and
