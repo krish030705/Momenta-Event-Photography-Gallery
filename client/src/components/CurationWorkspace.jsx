@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import { Search, CheckSquare, Square, X, Image as ImageIcon } from "lucide-react";
 import api from "../services/api";
+import { useToast } from "../context/ToastContext";
 import PhotoPreviewModal from "./PhotoPreviewModal";
 
 const STATUS_FILTERS = [
@@ -11,6 +12,7 @@ const STATUS_FILTERS = [
 ];
 
 export default function CurationWorkspace({ eventId, photos, teamMembers, onPhotosUpdated }) {
+  const { showToast } = useToast();
   const [statusFilter, setStatusFilter] = useState("all");
   const [photographerFilter, setPhotographerFilter] = useState("all");
   const [search, setSearch] = useState("");
@@ -54,9 +56,10 @@ export default function CurationWorkspace({ eventId, photos, teamMembers, onPhot
         isSelected,
       });
       onPhotosUpdated(res.data.photos);
+      showToast(`${selectedIds.size} photo${selectedIds.size !== 1 ? "s" : ""} marked ${isSelected ? "selected" : "unselected"}`);
       clearSelection();
     } catch (err) {
-      alert(err.response?.data?.message || "Bulk update failed");
+      showToast(err.response?.data?.message || "Bulk update failed", "error");
     } finally {
       setBulkWorking(false);
     }
@@ -71,7 +74,7 @@ export default function CurationWorkspace({ eventId, photos, teamMembers, onPhot
         photos.map((p) => (p._id === photo._id ? { ...p, isSelected: res.data.photo.isSelected } : p))
       );
     } catch (err) {
-      alert(err.response?.data?.message || "Could not update photo");
+      showToast(err.response?.data?.message || "Could not update photo", "error");
     }
   };
 
@@ -106,9 +109,7 @@ export default function CurationWorkspace({ eventId, photos, teamMembers, onPhot
               key={f.value}
               onClick={() => setStatusFilter(f.value)}
               className={`px-3 py-2 transition ${
-                statusFilter === f.value
-                  ? "bg-accent text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-50"
+                statusFilter === f.value ? "bg-accent text-white" : "bg-white text-gray-600 hover:bg-gray-50"
               }`}
             >
               {f.label}
@@ -122,9 +123,9 @@ export default function CurationWorkspace({ eventId, photos, teamMembers, onPhot
       </p>
 
       {selectedIds.size > 0 && (
-        <div className="sticky top-0 z-10 flex items-center justify-between bg-ink text-white rounded-xl px-4 py-3 mb-4 shadow-lg">
+        <div className="sticky top-0 z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-ink text-white rounded-xl px-4 py-3 mb-4 shadow-lg">
           <span className="text-sm font-medium">{selectedIds.size} photos checked</span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => applyBulkSelection(true)}
               disabled={bulkWorking}
@@ -139,11 +140,7 @@ export default function CurationWorkspace({ eventId, photos, teamMembers, onPhot
             >
               Mark Unselected
             </button>
-            <button
-              onClick={clearSelection}
-              className="text-white/70 hover:text-white p-1.5"
-              title="Clear checked photos"
-            >
+            <button onClick={clearSelection} className="text-white/70 hover:text-white p-1.5" title="Clear checked photos">
               <X size={16} />
             </button>
           </div>
@@ -151,16 +148,10 @@ export default function CurationWorkspace({ eventId, photos, teamMembers, onPhot
       )}
 
       <div className="flex items-center gap-3 mb-4">
-        <button
-          onClick={selectAllVisible}
-          className="flex items-center gap-1.5 text-sm text-accent font-medium"
-        >
+        <button onClick={selectAllVisible} className="flex items-center gap-1.5 text-sm text-accent font-medium">
           <CheckSquare size={14} /> Select all visible
         </button>
-        <button
-          onClick={clearSelection}
-          className="flex items-center gap-1.5 text-sm text-gray-500 font-medium"
-        >
+        <button onClick={clearSelection} className="flex items-center gap-1.5 text-sm text-gray-500 font-medium">
           <Square size={14} /> Clear
         </button>
       </div>

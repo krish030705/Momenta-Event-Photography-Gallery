@@ -3,11 +3,14 @@ import { useEffect, useState } from "react";
 import { Plus, Calendar, Image, CheckCircle2 } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 import EventCard from "../components/EventCard";
 import CreateEventModal from "../components/CreateEventModal";
+import { EventCardSkeleton, StatCardSkeleton } from "../components/Skeleton";
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -33,7 +36,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-ink">
             {user?.role === "admin" ? "Your Events" : "Assigned Events"}
@@ -48,7 +51,7 @@ export default function Dashboard() {
         {user?.role === "admin" && (
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 bg-accent text-white rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90 transition"
+            className="flex items-center justify-center gap-2 bg-accent text-white rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90 transition"
           >
             <Plus size={16} />
             Create Event
@@ -57,22 +60,26 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-        <StatCard icon={<Calendar size={16} />} label="Total Events" value={totalEvents} />
-        <StatCard icon={<Calendar size={16} />} label="Active (Unpublished)" value={activeEvents} />
-        <StatCard icon={<Image size={16} />} label="Total Photos" value={totalPhotos} />
-        <StatCard
-          icon={<CheckCircle2 size={16} />}
-          label="Published Galleries"
-          value={publishedGalleries}
-        />
+        {loading ? (
+          Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
+        ) : (
+          <>
+            <StatCard icon={<Calendar size={16} />} label="Total Events" value={totalEvents} />
+            <StatCard icon={<Calendar size={16} />} label="Active (Unpublished)" value={activeEvents} />
+            <StatCard icon={<Image size={16} />} label="Total Photos" value={totalPhotos} />
+            <StatCard icon={<CheckCircle2 size={16} />} label="Published Galleries" value={publishedGalleries} />
+          </>
+        )}
       </div>
 
-      {error && (
-        <p className="text-red-600 bg-red-50 rounded-lg p-3 text-sm mb-4">{error}</p>
-      )}
+      {error && <p className="text-red-600 bg-red-50 rounded-lg p-3 text-sm mb-4">{error}</p>}
 
       {loading ? (
-        <p className="text-gray-400 text-sm">Loading events...</p>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <EventCardSkeleton key={i} />
+          ))}
+        </div>
       ) : events.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-300">
           <p className="text-gray-500">
@@ -92,7 +99,10 @@ export default function Dashboard() {
       {showCreateModal && (
         <CreateEventModal
           onClose={() => setShowCreateModal(false)}
-          onCreated={(newEvent) => setEvents((prev) => [newEvent, ...prev])}
+          onCreated={(newEvent) => {
+            setEvents((prev) => [newEvent, ...prev]);
+            showToast(`"${newEvent.name}" created`);
+          }}
         />
       )}
     </div>

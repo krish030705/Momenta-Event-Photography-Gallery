@@ -2,8 +2,10 @@
 import { useEffect, useState } from "react";
 import { Link2, Copy, Check, Lock, Globe } from "lucide-react";
 import api from "../services/api";
+import { useToast } from "../context/ToastContext";
 
 export default function GalleryPanel({ eventId, selectedPhotoCount }) {
+  const { showToast } = useToast();
   const [gallery, setGallery] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -35,6 +37,7 @@ export default function GalleryPanel({ eventId, selectedPhotoCount }) {
       const res = await api.post(`/events/${eventId}/gallery`, { pin });
       setGallery(res.data.gallery);
       setPin("");
+      showToast("Gallery created");
     } catch (err) {
       setError(err.response?.data?.message || "Could not create gallery");
     } finally {
@@ -49,6 +52,7 @@ export default function GalleryPanel({ eventId, selectedPhotoCount }) {
       const action = gallery.isPublished ? "unpublish" : "publish";
       const res = await api.post(`/gallery/${gallery._id}/${action}`);
       setGallery((prev) => ({ ...prev, ...res.data.gallery }));
+      showToast(action === "publish" ? "Gallery published — live for customers" : "Gallery unpublished");
     } catch (err) {
       setError(err.response?.data?.message || "Action failed");
     } finally {
@@ -64,6 +68,7 @@ export default function GalleryPanel({ eventId, selectedPhotoCount }) {
       const res = await api.patch(`/gallery/${gallery._id}`, { pin: newPin });
       setGallery((prev) => ({ ...prev, ...res.data.gallery }));
       setNewPin("");
+      showToast("PIN updated");
     } catch (err) {
       setError(err.response?.data?.message || "Could not update PIN");
     } finally {
@@ -85,9 +90,7 @@ export default function GalleryPanel({ eventId, selectedPhotoCount }) {
         <Link2 size={18} /> Customer Gallery
       </h2>
 
-      {error && (
-        <p className="text-red-600 bg-red-50 rounded-lg p-3 text-sm mb-4">{error}</p>
-      )}
+      {error && <p className="text-red-600 bg-red-50 rounded-lg p-3 text-sm mb-4">{error}</p>}
 
       {!gallery ? (
         <form onSubmit={handleCreate} className="space-y-3">
@@ -117,12 +120,10 @@ export default function GalleryPanel({ eventId, selectedPhotoCount }) {
         </form>
       ) : (
         <div className="space-y-5">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <span
-              className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${
-                gallery.isPublished
-                  ? "bg-green-50 text-green-700"
-                  : "bg-gray-100 text-gray-500"
+              className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full self-start ${
+                gallery.isPublished ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"
               }`}
             >
               {gallery.isPublished ? <Globe size={12} /> : <Lock size={12} />}
@@ -132,9 +133,7 @@ export default function GalleryPanel({ eventId, selectedPhotoCount }) {
               onClick={handlePublishToggle}
               disabled={working || (!gallery.isPublished && selectedPhotoCount === 0)}
               className={`text-sm font-medium px-4 py-2 rounded-lg transition disabled:opacity-50 ${
-                gallery.isPublished
-                  ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  : "bg-accent text-white hover:opacity-90"
+                gallery.isPublished ? "bg-gray-100 text-gray-700 hover:bg-gray-200" : "bg-accent text-white hover:opacity-90"
               }`}
               title={
                 !gallery.isPublished && selectedPhotoCount === 0
@@ -154,16 +153,16 @@ export default function GalleryPanel({ eventId, selectedPhotoCount }) {
 
           <div>
             <label className="block text-xs text-gray-400 mb-1">Share link</label>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <input
                 type="text"
                 readOnly
                 value={shareUrl}
-                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm bg-gray-50 text-gray-600"
+                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm bg-gray-50 text-gray-600 min-w-0"
               />
               <button
                 onClick={copyLink}
-                className="flex items-center gap-1.5 bg-gray-100 text-gray-700 rounded-lg px-3 py-2 text-sm hover:bg-gray-200 transition"
+                className="flex items-center justify-center gap-1.5 bg-gray-100 text-gray-700 rounded-lg px-3 py-2 text-sm hover:bg-gray-200 transition shrink-0"
               >
                 {copied ? <Check size={14} /> : <Copy size={14} />}
                 {copied ? "Copied" : "Copy"}

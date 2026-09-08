@@ -1,17 +1,22 @@
 // pages/EventDetails.jsx
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Calendar, MapPin, UserPlus, X } from "lucide-react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, Calendar, MapPin, UserPlus, X, Trash2 } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 import PhotoUploader from "../components/PhotoUploader";
 import PhotoGrid from "../components/PhotoGrid";
 import CurationWorkspace from "../components/CurationWorkspace";
 import GalleryPanel from "../components/GalleryPanel";
+import ConfirmDialog from "../components/ConfirmDialog";
+import { EventDetailsSkeleton } from "../components/Skeleton";
 
 export default function EventDetails() {
   const { id } = useParams();
   const { user } = useAuth();
+  const { showToast } = useToast();
+  const navigate = useNavigate();
 
   const [event, setEvent] = useState(null);
   const [photos, setPhotos] = useState([]);
@@ -21,6 +26,10 @@ export default function EventDetails() {
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [addingMember, setAddingMember] = useState(false);
   const [memberError, setMemberError] = useState("");
+
+  const [memberToRemove, setMemberToRemove] = useState(null);
+  const [confirmingDeleteEvent, setConfirmingDeleteEvent] = useState(false);
+  const [deletingEvent, setDeletingEvent] = useState(false);
 
   const fetchEvent = () => {
     setLoading(true);
@@ -53,6 +62,7 @@ export default function EventDetails() {
       const res = await api.post(`/events/${id}/members`, { email: newMemberEmail });
       setEvent((prev) => ({ ...prev, teamMembers: res.data.event.teamMembers }));
       setNewMemberEmail("");
+      showToast("Team member added");
     } catch (err) {
       setMemberError(err.response?.data?.message || "Could not add team member");
     } finally {
@@ -60,18 +70,25 @@ export default function EventDetails() {
     }
   };
 
-  const handleRemoveMember = async (userId) => {
+  const confirmRemoveMember = async () => {
+    if (!memberToRemove) return;
     try {
-      const res = await api.delete(`/events/${id}/members/${userId}`);
+      const res = await api.delete(`/events/${id}/members/${memberToRemove._id}`);
       setEvent((prev) => ({ ...prev, teamMembers: res.data.event.teamMembers }));
+      showToast(`${memberToRemove.name} removed from event`);
     } catch (err) {
-      setMemberError(err.response?.data?.message || "Could not remove team member");
+      showToast(err.response?.data?.message || "Could not remove team member", "error");
+    } finally {
+      setMemberToRemove(null);
     }
   };
 
   const handlePhotosUploaded = (newPhotos) => {
     setPhotos((prev) => [...newPhotos, ...prev]);
     fetchEvent();
+    if (newPhotos.length > 0) {
+      showToast(`${newPhotos.length} photo${newPhotos.length !== 1 ? "s" : ""} uploaded`);
+    }
   };
 
   const handlePhotoDeleted = (photoId) => {
@@ -79,7 +96,20 @@ export default function EventDetails() {
     fetchEvent();
   };
 
-  if (loading) return <p className="text-gray-400 text-sm">Loading event...</p>;
+  const handleDeleteEvent = async () => {
+    setDeletingEvent(true);
+    try {
+      await api.delete(`/events/${id}`);
+      showToast(`"${event.name}" deleted`);
+      navigate("/");
+    } catch (err) {
+      showToast(err.response?.data?.message || "Could not delete event", "error");
+      setDeletingEvent(false);
+      setConfirmingDeleteEvent(false);
+    }
+  };
+
+  if (loading) return <EventDetailsSkeleton />;
 
   if (error) {
     return (
@@ -100,15 +130,26 @@ export default function EventDetails() {
 
   return (
     <div>
-      <Link to="/" className="text-sm text-accent flex items-center gap-1 mb-4">
-        <ArrowLeft size={14} /> Back to events
-      </Link>
+      <div className="flex items-center justify-between mb-4">
+        <Link to="/" className="text-sm text-accent flex items-center gap-1">
+          <ArrowLeft size={14} /> Back to events
+        </Link>
+
+        {isOwner && (
+          <button
+            onClick={() => setConfirmingDeleteEvent(true)}
+            className="flex items-center gap-1.5 text-sm text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition"
+          >
+            <Trash2 size={14} /> Delete Event
+          </button>
+        )}
+      </div>
 
       <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold text-ink mb-2">{event.name}</h1>
-            <div className="flex items-center gap-4 text-sm text-gray-500">
+            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
               <span className="flex items-center gap-1.5">
                 <Calendar size={14} /> {eventDate}
               </span>
@@ -120,21 +161,19 @@ export default function EventDetails() {
             </div>
           </div>
           {event.isPublished ? (
-            <span className="text-xs font-medium bg-green-50 text-green-700 px-2.5 py-1 rounded-full">
+            <span className="text-xs font-medium bg-green-50 text-green-700 px-2.5 py-1 rounded-full self-start">
               Gallery Published
             </span>
           ) : (
-            <span className="text-xs font-medium bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full">
+            <span className="text-xs font-medium bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full self-start">
               Draft
             </span>
           )}
         </div>
 
-        {event.description && (
-          <p className="text-sm text-gray-600 mt-4">{event.description}</p>
-        )}
+        {event.description && <p className="text-sm text-gray-600 mt-4">{event.description}</p>}
 
-        <div className="flex gap-6 mt-6 pt-6 border-t border-gray-100 text-sm">
+        <div className="flex flex-wrap gap-6 mt-6 pt-6 border-t border-gray-100 text-sm">
           <div>
             <p className="text-gray-400 text-xs mb-0.5">Uploaded</p>
             <p className="font-semibold text-ink">{event.totalPhotos}</p>
@@ -172,7 +211,7 @@ export default function EventDetails() {
                 </div>
                 {isOwner && (
                   <button
-                    onClick={() => handleRemoveMember(member._id)}
+                    onClick={() => setMemberToRemove(member)}
                     className="text-gray-400 hover:text-red-600"
                     title="Remove from event"
                   >
@@ -185,7 +224,7 @@ export default function EventDetails() {
         )}
 
         {isOwner && (
-          <form onSubmit={handleAddMember} className="flex gap-2">
+          <form onSubmit={handleAddMember} className="flex flex-col sm:flex-row gap-2">
             <input
               type="email"
               required
@@ -197,7 +236,7 @@ export default function EventDetails() {
             <button
               type="submit"
               disabled={addingMember}
-              className="flex items-center gap-1.5 bg-accent text-white rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50 transition"
+              className="flex items-center justify-center gap-1.5 bg-accent text-white rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50 transition"
             >
               <UserPlus size={16} />
               {addingMember ? "Adding..." : "Add"}
@@ -206,7 +245,6 @@ export default function EventDetails() {
         )}
       </div>
 
-      {/* Photo upload -- both roles can upload */}
       <div className="space-y-4">
         <PhotoUploader eventId={id} onUploaded={handlePhotosUploaded} />
 
@@ -242,12 +280,30 @@ export default function EventDetails() {
         </div>
 
         {isOwner && (
-          <GalleryPanel
-            eventId={id}
-            selectedPhotoCount={photos.filter((p) => p.isSelected).length}
-          />
+          <GalleryPanel eventId={id} selectedPhotoCount={photos.filter((p) => p.isSelected).length} />
         )}
       </div>
+
+      {memberToRemove && (
+        <ConfirmDialog
+          title="Remove team member?"
+          message={`${memberToRemove.name} will lose access to this event. Their already-uploaded photos will stay.`}
+          confirmLabel="Remove"
+          onConfirm={confirmRemoveMember}
+          onCancel={() => setMemberToRemove(null)}
+        />
+      )}
+
+      {confirmingDeleteEvent && (
+        <ConfirmDialog
+          title="Delete this event?"
+          message={`This permanently deletes "${event.name}", all ${event.totalPhotos} of its photos, and its gallery. This cannot be undone.`}
+          confirmLabel="Delete Event"
+          onConfirm={handleDeleteEvent}
+          onCancel={() => setConfirmingDeleteEvent(false)}
+          working={deletingEvent}
+        />
+      )}
     </div>
   );
 }
