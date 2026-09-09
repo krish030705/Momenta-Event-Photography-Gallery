@@ -1,7 +1,7 @@
 {
-  "name": "vistara-server",
+  "name": "momenta-server",
   "version": "1.0.0",
-  "description": "Vistara backend - Intelligent Event Photography & Gallery Platform",
+  "description": "Momenta backend - Intelligent Event Photography & Gallery Platform",
   "main": "server.js",
   "type": "module",
   "scripts": {

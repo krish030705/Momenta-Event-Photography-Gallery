@@ -22,6 +22,16 @@ app.use(
   })
 );
 app.use(express.json());
+// Basic request logging -- lets us see incoming requests (including
+// slow ones like photo uploads) in the Render logs while debugging.
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    console.log(`${req.method} ${req.originalUrl} -> ${res.statusCode} (${duration}ms)`);
+  });
+  next();
+});
 
 // --- Routes ---
 app.use("/api/health", healthRoutes);
@@ -35,5 +45,5 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Vistara server running on port ${PORT}`);
+  console.log(`Momenta server running on port ${PORT}`);
 });
