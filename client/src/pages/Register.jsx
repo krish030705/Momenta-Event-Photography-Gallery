@@ -32,7 +32,7 @@ export default function Register() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="bg-white shadow-md rounded-2xl p-8 max-w-sm w-full">
         <h1 className="text-2xl font-semibold text-ink mb-1">Create an account</h1>
-        <p className="text-gray-500 text-sm mb-6">Start using Vistara</p>
+        <p className="text-gray-500 text-sm mb-6">Start using Momenta</p>
 
         {error && <p className="text-red-600 bg-red-50 rounded-lg p-3 text-sm mb-4">{error}</p>}
 
