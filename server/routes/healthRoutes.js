@@ -16,7 +16,7 @@ router.get("/", (req, res) => {
 
   res.status(200).json({
     success: true,
-    message: "Vistara API is running",
+    message: "Momenta API is running",
     database: dbStatus,
     timestamp: new Date().toISOString(),
   });
