@@ -13,14 +13,7 @@ export default function PhotoUploader({ eventId, onUploaded }) {
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
-          const res = await api.post(`/events/${eventId}/photos`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-        timeout: 180000, // 3 minutes -- generous but bounded
-        onUploadProgress: (progressEvent) => {
-          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setProgress(percent);
-        },
-      });
+
     setError("");
     setLastResult(null);
     setUploading(true);
@@ -32,6 +25,7 @@ export default function PhotoUploader({ eventId, onUploaded }) {
     try {
       const res = await api.post(`/events/${eventId}/photos`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
+        timeout: 180000, // 3 minutes -- generous but bounded
         onUploadProgress: (progressEvent) => {
           const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
           setProgress(percent);
