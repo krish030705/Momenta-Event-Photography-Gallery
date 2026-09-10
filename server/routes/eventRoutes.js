@@ -9,10 +9,9 @@ import {
   addTeamMember,
   removeTeamMember,
 } from "../controllers/eventController.js";
-import { uploadPhotos, getPhotos, bulkSelectPhotos } from "../controllers/photoController.js";
+import { getPhotos, bulkSelectPhotos, savePhotoMetadata } from "../controllers/photoController.js";
 import { createGallery, getGalleryForEvent } from "../controllers/galleryController.js";
 import { protect, authorize } from "../middleware/authMiddleware.js";
-import upload from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
@@ -28,7 +27,7 @@ router.delete("/:id", authorize("admin"), deleteEvent);
 router.post("/:id/members", authorize("admin"), addTeamMember);
 router.delete("/:id/members/:userId", authorize("admin"), removeTeamMember);
 
-router.post("/:id/photos", upload.array("photos", 20), uploadPhotos);
+router.post("/:id/photos/metadata", savePhotoMetadata);
 router.get("/:id/photos", getPhotos);
 router.patch("/:id/photos/bulk-select", authorize("admin"), bulkSelectPhotos);
 

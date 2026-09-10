@@ -2,6 +2,10 @@
 import { useRef, useState } from "react";
 import { UploadCloud, Loader2 } from "lucide-react";
 import api from "../services/api";
+import { uploadFileDirectToCloudinary } from "../services/cloudinaryDirectUpload";
+
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
+const MAX_SIZE = 15 * 1024 * 1024;
 
 export default function PhotoUploader({ eventId, onUploaded }) {
   const fileInputRef = useRef(null);
@@ -19,26 +23,57 @@ export default function PhotoUploader({ eventId, onUploaded }) {
     setUploading(true);
     setProgress(0);
 
-    const formData = new FormData();
-    files.forEach((file) => formData.append("photos", file));
+    const validFiles = [];
+    let rejectedCount = 0;
+    files.forEach((file) => {
+      if (!ALLOWED_TYPES.includes(file.type) || file.size > MAX_SIZE) {
+        rejectedCount++;
+      } else {
+        validFiles.push(file);
+      }
+    });
+
+    if (validFiles.length === 0) {
+      setError("No valid image files selected (check file type and the 15MB size limit).");
+      setUploading(false);
+      return;
+    }
+
+    const progressByFile = new Array(validFiles.length).fill(0);
+    const updateOverallProgress = () => {
+      const total = progressByFile.reduce((sum, p) => sum + p, 0);
+      setProgress(Math.round(total / validFiles.length));
+    };
+
+    const results = await Promise.allSettled(
+      validFiles.map((file, i) =>
+        uploadFileDirectToCloudinary(file, `momenta/${eventId}`, (pct) => {
+          progressByFile[i] = pct;
+          updateOverallProgress();
+        }).then((res) => ({
+          filename: file.name,
+          storageUrl: res.data.secure_url,
+          storagePublicId: res.data.public_id,
+          fileSize: file.size,
+          mimeType: file.type,
+        }))
+      )
+    );
+
+    const uploadedMeta = results.filter((r) => r.status === "fulfilled").map((r) => r.value);
+    const failedCount = results.length - uploadedMeta.length + rejectedCount;
 
     try {
-      const res = await api.post(`/events/${eventId}/photos`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-        timeout: 180000, // 3 minutes -- generous but bounded
-        onUploadProgress: (progressEvent) => {
-          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setProgress(percent);
-        },
-      });
+      if (uploadedMeta.length > 0) {
+        const res = await api.post(`/events/${eventId}/photos/metadata`, {
+          photos: uploadedMeta,
+        });
+        onUploaded(res.data.photos);
+      }
 
-      setLastResult({
-        uploadedCount: res.data.uploadedCount,
-        failedCount: res.data.failedCount,
-      });
-      onUploaded(res.data.photos);
+      setLastResult({ uploadedCount: uploadedMeta.length, failedCount });
     } catch (err) {
-      setError(err.response?.data?.message || "Upload failed. Please try again.");
+      setError(err.response?.data?.message || "Could not save uploaded photos. Please try again.");
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
