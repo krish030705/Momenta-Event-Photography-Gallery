@@ -9,11 +9,7 @@ no account required.
 
 - **App:** https://momenta-event-photography-gallery.vercel.app
 - **API:** https://momenta-event-photography-gallery-1.onrender.com/api/health
-- **Admin login:** `krish@gmail.com` / `123456`
-- **Sample published gallery** (no login needed):
-  https://momenta-event-photography-gallery.vercel.app/gallery/abi-s-1st-birthday-3550a5
-  — PIN: `8520`
-
+  
 > Note: the backend is hosted on Render's free tier, which spins down
 > after ~15 minutes of inactivity. The first request after idle time
 > can take 30-60 seconds to respond — this is expected, not a bug.
